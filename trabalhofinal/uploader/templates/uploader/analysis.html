@@ -1,11 +1,68 @@
 {% extends 'base.html' %}
-
 {% block content %}
-    <h2>2. Análise de Dados</h2>
-    <p>
-        O arquivo foi carregado com sucesso.
-    </p>
-    <p>
-        (exibir AQUI os gráficos e análises.)
-    </p>
+<div class="grid grid-2">
+    <div class="card">
+        <div class="inner">
+            <div class="kicker">Etapa 2</div>
+            <h2>Análise de Dados</h2>
+            <p class="muted">Abaixo ficam os gráficos básicos (barras/pizza) e, ao lado, os avançados/interativos.</p>
+            <p class="muted">Contrato com Dev 3: passar no contexto uma lista <code>plots</code> com objetos
+                <code>{"section":"basic|advanced","title":"...","img":"data:image/png;base64,..."}</code>.
+            </p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="inner">
+            <div class="kicker">Status</div>
+            <h2>Dados carregados</h2>
+            <ul class="muted">
+                <li>DataFrame salvo em sessão (JSON orient='split').</li>
+                <li>Template pronto para renderizar imagens base64.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="inner">
+            <h3>Gráficos básicos</h3>
+            <div id="basic-plots">
+                {% if plots %}
+                {% for p in plots %}
+                {% if p.section == 'basic' %}
+                <figure style="margin:0 0 16px">
+                    <figcaption class="muted" style="margin-bottom:6px">{{ p.title }}</figcaption>
+                    <img src="{{ p.img }}" alt="{{ p.title }}"
+                        style="width:100%; border-radius:12px; border:1px solid rgba(255,255,255,.12)" />
+                </figure>
+                {% endif %}
+                {% endfor %}
+                {% else %}
+                <p class="muted">Nenhum gráfico ainda — aguarde a integração do Dev 3.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="inner">
+            <h3>Gráficos avançados / interativos</h3>
+            <div id="advanced-plots">
+                {% if plots %}
+                {% for p in plots %}
+                {% if p.section == 'advanced' %}
+                <figure style="margin:0 0 16px">
+                    <figcaption class="muted" style="margin-bottom:6px">{{ p.title }}</figcaption>
+                    <img src="{{ p.img }}" alt="{{ p.title }}"
+                        style="width:100%; border-radius:12px; border:1px solid rgba(255,255,255,.12)" />
+                </figure>
+                {% endif %}
+                {% endfor %}
+                {% else %}
+                <p class="muted">Aqui entram mapas/heatmaps/etc. conforme a base permitir.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

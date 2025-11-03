@@ -1,9 +1,102 @@
 {% extends 'base.html' %}
-
 {% block content %}
-    <h2>3. Predição com Machine Learning</h2>
-    <p>
-        (formulário de predição AQUI
-        e exibir os resultados.)
-    </p>
+<div class="card">
+    <div class="inner">
+        <div class="kicker">Etapa 3</div>
+        <h2>Predição com Machine Learning</h2>
+        <p class="muted">Escolha o modelo, ajuste hiperparâmetros e envie um novo exemplo. Também é possível re-treinar
+            o modelo.</p>
+
+        <form method="post" class="grid">
+            {% csrf_token %}
+
+            <div class="card">
+                <div class="inner">
+                    <h3>Modelo</h3>
+                    <select name="modelo" id="modelo" required>
+                        <option value="" disabled selected>Selecione</option>
+                        <option value="KNN">KNN</option>
+                        <option value="DecisionTree">Decision Tree</option>
+                        <option value="RandomForest">Random Forest</option>
+                        <option value="LogisticRegression">Logistic Regression</option>
+                        <option value="SVM">SVM</option>
+                    </select>
+                    <p class="muted">O Dev 4 lê este valor e instancia o classificador certo.</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="inner">
+                    <h3>Hiperparâmetros</h3>
+                    <div id="params" class="grid"></div>
+                    <p class="muted">Os campos são gerados dinamicamente conforme o modelo (enviados como
+                        <code>hp_*</code>).</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="inner">
+                    <h3>Novo exemplo para predição</h3>
+                    <div id="inputs" class="grid">
+                        {% if input_fields %}
+                        {% for f in input_fields %}
+                        <label>
+                            {{ f.label }}<br />
+                            <input name="X_{{ f.name }}" type="{{ f.type|default:'text' }}"
+                                placeholder="{{ f.placeholder|default:'' }}" />
+                        </label>
+                        {% endfor %}
+                        {% else %}
+                        <p class="muted">Aguardando integração: passe <code>input_fields</code> no contexto com
+                            nomes/tipos de colunas.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid">
+                <button name="action" value="predict" class="btn">Prever</button>
+                <button name="action" value="retrain" class="btn secondary">Re-treinar modelo</button>
+            </div>
+
+            {% if prediction %}
+            <div class="card">
+                <div class="inner">
+                    <h3>Resultado da Predição</h3>
+                    <p><strong>Saída:</strong> {{ prediction.output }}</p>
+                    <p class="muted">Métricas (opcional): {{ prediction.metrics }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<script>
+    // Hiperparâmetros dinâmicos por modelo (UI)
+    const PARAM_SCHEMAS = {
+        KNN: [{ name: 'n_neighbors', label: 'n_neighbors', type: 'number', min: 1, value: 5 }],
+        DecisionTree: [{ name: 'max_depth', label: 'max_depth', type: 'number', min: 1, value: 5 }],
+        RandomForest: [
+            { name: 'n_estimators', label: 'n_estimators', type: 'number', min: 10, value: 100 },
+            { name: 'max_depth', label: 'max_depth', type: 'number', min: 1, value: 10 }
+        ],
+        LogisticRegression: [{ name: 'C', label: 'C', type: 'number', step: '0.1', value: 1.0 }],
+        SVM: [{ name: 'C', label: 'C', type: 'number', step: '0.1', value: 1.0 }]
+    };
+
+    const modelo = document.getElementById('modelo');
+    const params = document.getElementById('params');
+
+    function renderParams() {
+        params.innerHTML = '';
+        const schema = PARAM_SCHEMAS[modelo.value] || [];
+        schema.forEach(s => {
+            const wrap = document.createElement('label');
+            wrap.innerHTML = `${s.label}<br/><input name="hp_${s.name}" type="${s.type}" value="${s.value ?? ''}" ${s.min ? `min="${s.min}"` : ''} ${s.step ? `step="${s.step}"` : ''} />`;
+            params.appendChild(wrap);
+        });
+    }
+    modelo.addEventListener('change', renderParams);
+</script>
 {% endblock %}

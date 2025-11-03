@@ -1,15 +1,46 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <h2>1. Upload de Arquivo .csv</h2>
-    
-    <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        <input type="file" name="csv_file" accept=".csv" required>
-        <button type="submit">Enviar e Analisar</button>
-    </form>
-    
-    {% if error %}
-        <p style="color: red;">Erro ao processar o arquivo: {{ error }}</p>
-    {% endif %}
+<div class="card">
+    <div class="inner">
+        <div class="kicker">Etapa 1</div>
+        <h2>Upload de dados (.csv)</h2>
+        <p class="muted">Envie um .csv com as colunas combinadas. Após o upload, você será levado à Análise.</p>
+
+        <form method="post" enctype="multipart/form-data" class="grid">
+            {% csrf_token %}
+            <div id="dropzone" class="card"
+                style="border:1px dashed rgba(255,255,255,.25); background:rgba(255,255,255,.04)">
+                <div class="inner" style="text-align:center">
+                    <p id="dz-text" class="muted">Arraste e solte seu .csv aqui, ou clique para escolher.</p>
+                    <input id="csv" type="file" name="csv_file" accept=".csv" required style="display:none">
+                    <button type="button" class="btn secondary"
+                        onclick="document.getElementById('csv').click()">Selecionar arquivo</button>
+                </div>
+            </div>
+
+            <div>
+                <button type="submit" class="btn">Enviar e Analisar</button>
+                {% if error %}<p style="color:#ff9a9a; margin-top:8px">Erro: {{ error }}</p>{% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    const dz = document.getElementById('dropzone');
+    const fileInput = document.getElementById('csv');
+    const dzText = document.getElementById('dz-text');
+
+    dz.addEventListener('click', () => fileInput.click());
+    dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor = '#6c7bff'; });
+    dz.addEventListener('dragleave', () => dz.style.borderColor = 'rgba(255,255,255,.25)');
+    dz.addEventListener('drop', e => {
+        e.preventDefault();
+        if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; dzText.textContent = 'Selecionado: ' + fileInput.files[0].name; }
+    });
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length) { dzText.textContent = 'Selecionado: ' + fileInput.files[0].name; }
+    });
+</script>
 {% endblock %}

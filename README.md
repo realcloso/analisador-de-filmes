@@ -16,19 +16,14 @@ Esta e a estrutura base (backend) da aplicacao, desenvolvida com Django.
 
 ### ESTADO ATUAL
 
-Criacao do projeto Django 'trabalhofinal' e do app 'uploader'.
+O backend da aplicação está estruturado com Django e já conta com as seguintes funcionalidades:
 
-Configuracao do ambiente e do arquivo 'requirements.txt'.
-
-Estrutura de URLs para 3 paginas principais: Upload, Analise e Predicao.
-
-Implementacao da funcionalidade de Upload de arquivos .csv.
-
-O sistema le o .csv com a biblioteca Pandas, converte o DataFrame para JSON e o armazena na sessao do usuario.
-
-O usuario e redirecionado para a pagina de Analise apos o upload.
-
-Criacao de templates basicos (base.html, upload.html, analysis.html, prediction.html) com navegacao.
+- **Upload de Arquivos**: Sistema para upload de arquivos `.csv` via interface web.
+- **Processamento de Dados**: Após o upload, os dados são lidos com Pandas e armazenados na sessão do usuário.
+- **Análise Automática**: A classe `DataAnalyzer` realiza a limpeza dos dados, identifica os tipos de colunas (numéricas, categóricas, temporais, etc.) e gera um conjunto completo de visualizações, incluindo:
+    - Análises univariadas e bivariadas (histogramas, boxplots, heatmaps).
+    - Análises temporais e geográficas.
+- **Estrutura Web**: URLs e templates básicos para as páginas de Upload, Análise e Predição estão configurados.
 
 ### COMO RODAR O PROJETO
 

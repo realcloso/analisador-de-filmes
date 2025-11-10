@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
 import pandas as pd
-import base64
+import io
+from .analytics import DataAnalyzer
 
 def upload_file(request):
     if request.method == 'POST':
@@ -9,78 +10,65 @@ def upload_file(request):
             return render(request, 'uploader/upload.html', {'error': 'Envie um arquivo .csv.'})
 
         try:
-            df = pd.read_csv(f)
+            df = pd.read_csv(f, encoding='utf-8', on_bad_lines='skip')
             request.session['dataframe'] = df.to_json(orient='split')
             request.session['df_columns'] = list(df.columns)
-            request.session['has_df'] = True  # flag para o mock
             return redirect('analysis')
         except Exception as e:
-            return render(request, 'uploader/upload.html', {'error': str(e)})
+            return render(request, 'uploader/upload.html', {'error': f'Erro ao processar o arquivo: {e}'})
 
     return render(request, 'uploader/upload.html')
 
-
-# ====== ANALYSIS (com gráficos MOCK) ======
 def analysis_view(request):
-    plots = []
-    if request.session.get('has_df'):
-        svg_bar = """
-        <svg xmlns='http://www.w3.org/2000/svg' width='480' height='220'>
-          <rect width='480' height='220' fill='#1a1e35'/>
-          <rect x='40' y='120' width='60' height='80' fill='#6c7bff'/>
-          <rect x='140' y='80' width='60' height='120' fill='#33d1ff'/>
-          <rect x='240' y='60' width='60' height='140' fill='#6c7bff'/>
-          <rect x='340' y='150' width='60' height='50' fill='#33d1ff'/>
-          <text x='40' y='30' fill='#eef0ff' font-size='16'>Exemplo (mock) - Barras</text>
-        </svg>
-        """.strip()
+    df_json = request.session.get('dataframe')
+    if not df_json:
+        return render(request, 'uploader/analysis.html', {"plots": [], "error": "Nenhum dado para analisar. Por favor, faça o upload de um arquivo CSV."})
 
-        svg_heat = """
-        <svg xmlns='http://www.w3.org/2000/svg' width='480' height='220'>
-          <defs>
-            <linearGradient id='g' x1='0' x2='1'>
-              <stop offset='0%' stop-color='#6c7bff'/>
-              <stop offset='100%' stop-color='#33d1ff'/>
-            </linearGradient>
-          </defs>
-          <rect width='480' height='220' fill='#1a1e35'/>
-          <rect x='40'  y='40'  width='120' height='60' fill='url(#g)' opacity='0.9'/>
-          <rect x='180' y='40'  width='120' height='60' fill='url(#g)' opacity='0.7'/>
-          <rect x='320' y='40'  width='120' height='60' fill='url(#g)' opacity='0.5'/>
-          <rect x='40'  y='120' width='120' height='60' fill='url(#g)' opacity='0.6'/>
-          <rect x='180' y='120' width='120' height='60' fill='url(#g)' opacity='0.85'/>
-          <rect x='320' y='120' width='120' height='60' fill='url(#g)' opacity='0.4'/>
-          <text x='40' y='30' fill='#eef0ff' font-size='16'>Exemplo (mock) - Heatmap</text>
-        </svg>
-        """.strip()
+    try:
+        df = pd.read_json(io.StringIO(df_json), orient='split')
+        
+        if df.empty:
+            return render(request, 'uploader/analysis.html', {"plots": [], "error": "O DataFrame está vazio após o carregamento."})
 
-        def svg_to_dataurl(svg: str) -> str:
-            return "data:image/svg+xml;base64," + base64.b64encode(svg.encode("utf-8")).decode("utf-8")
+        analyzer = DataAnalyzer(df)
+        
+        if analyzer.df.empty:
+            return render(request, 'uploader/analysis.html', {"plots": [], "error": "O DataFrame ficou vazio após a limpeza de dados (ex: remoção de valores nulos)."})
 
-        plots = [
-            {"section": "basic", "title": "Gêneros (mock)", "img": svg_to_dataurl(svg_bar)},
-            {"section": "advanced", "title": "Correlação (mock)", "img": svg_to_dataurl(svg_heat)},
-        ]
+        plots = []
+        plots.extend(analyzer.generate_basic_plots())
+        plots.extend(analyzer.generate_advanced_plots())
+        geo_plot = analyzer.generate_geo_visualization()
+        if geo_plot:
+            plots.append(geo_plot)
+        temporal_plots = analyzer.generate_temporal_plots()
+        plots.extend(temporal_plots)
+        
+        grouped_plots = {}
+        for plot in plots:
+            section = plot.get('section', 'Geral')
+            if section not in grouped_plots:
+                grouped_plots[section] = []
+            grouped_plots[section].append(plot)
 
-    return render(request, 'uploader/analysis.html', {"plots": plots})
+        return render(request, 'uploader/analysis.html', {"grouped_plots": grouped_plots})
 
+    except Exception as e:
+        return render(request, 'uploader/analysis.html', {"plots": [], "error": f"Ocorreu um erro durante a análise: {e}"})
 
 def prediction_view(request):
     cols = request.session.get('df_columns') or []
-    if cols:
-        input_fields = [{"name": c, "label": c.capitalize(), "type": "text", "placeholder": ""} for c in cols[:6]]
-    else:
-        input_fields = [
-            {"name": "idade", "label": "Idade", "type": "number", "placeholder": "30"},
-            {"name": "genero", "label": "Gênero (texto)", "type": "text", "placeholder": "Ação"},
-            {"name": "orcamento", "label": "Orçamento (R$)", "type": "number", "placeholder": "10000000"},
-        ]
+    input_fields = [{"name": c, "label": c.capitalize()} for c in cols[:6]] if cols else [
+        {"name": "idade", "label": "Idade", "type": "number", "placeholder": "30"},
+        {"name": "genero", "label": "Gênero (texto)", "type": "text", "placeholder": "Ação"},
+        {"name": "orcamento", "label": "Orçamento (R$)", "type": "number", "placeholder": "10000000"},
+    ]
 
     ctx = {"input_fields": input_fields}
 
     if request.method == 'POST':
-        action = request.POST.get('action')         
-        modelo = request.POST.get('modelo')          
+        action = request.POST.get('action')
+        modelo = request.POST.get('modelo')
 
         if not modelo:
             ctx["prediction"] = {"output": "Modelo não selecionado.", "metrics": ""}
@@ -89,13 +77,10 @@ def prediction_view(request):
         hps = {k[3:]: v for k, v in request.POST.items() if k.startswith("hp_")}
         xs  = {k[2:]: v for k, v in request.POST.items() if k.startswith("X_")}
 
-        if action == 'retrain':
-            output = f"Modelo {modelo} re-treinado com {len(xs)} features e {len(hps)} hiperparâmetros. (mock)"
-            metrics = "acc=0.90 | f1=0.88 (mock)"
-        else:
-            output = f"Predição (mock) com {modelo}: classe='Sucesso' / score=0.82"
-            metrics = "acc=0.88 | f1=0.86 (mock)"
-
-        ctx["prediction"] = {"output": output, "metrics": metrics}
+        ctx["prediction"] = {
+            "output": f"Modelo {modelo} re-treinado com {len(xs)} features e {len(hps)} hiperparâmetros. (mock)" if action == 'retrain'
+                      else f"Predição (mock) com {modelo}: classe='Sucesso' / score=0.82",
+            "metrics": "acc=0.90 | f1=0.88 (mock)" if action == 'retrain' else "acc=0.88 | f1=0.86 (mock)"
+        }
 
     return render(request, 'uploader/prediction.html', ctx)

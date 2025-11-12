@@ -40,7 +40,6 @@ class DataAnalyzer:
         """
         df.columns = [str(col).strip().lower().replace(" ", "_") for col in df.columns]
 
-        # Tenta converter colunas que parecem numéricas mas são 'object'
         for col in df.columns:
             if df[col].dtype == "object":
                 df[col] = pd.to_numeric(df[col], errors="ignore")
@@ -99,7 +98,6 @@ class DataAnalyzer:
                 if col not in self.categorical_cols:
                     self.categorical_cols.append(col)
 
-        # Garante que as listas não tenham sobreposição
         self.numeric_cols = [
             c
             for c in self.numeric_cols

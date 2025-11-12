@@ -1,68 +1,53 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="grid grid-2">
-    <div class="card">
-        <div class="inner">
-            <div class="kicker">Etapa 2</div>
-            <h2>Análise de Dados</h2>
-            <p class="muted">Abaixo ficam os gráficos básicos (barras/pizza) e, ao lado, os avançados/interativos.</p>
-            <p class="muted">Contrato com Dev 3: passar no contexto uma lista <code>plots</code> com objetos
-                <code>{"section":"basic|advanced","title":"...","img":"data:image/png;base64,..."}</code>.
-            </p>
-        </div>
-    </div>
 
-    <div class="card">
-        <div class="inner">
-            <div class="kicker">Status</div>
-            <h2>Dados carregados</h2>
-            <ul class="muted">
-                <li>DataFrame salvo em sessão (JSON orient='split').</li>
-                <li>Template pronto para renderizar imagens base64.</li>
-            </ul>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="inner">
-            <h3>Gráficos básicos</h3>
-            <div id="basic-plots">
-                {% if plots %}
-                {% for p in plots %}
-                {% if p.section == 'basic' %}
-                <figure style="margin:0 0 16px">
-                    <figcaption class="muted" style="margin-bottom:6px">{{ p.title }}</figcaption>
-                    <img src="{{ p.img }}" alt="{{ p.title }}"
-                        style="width:100%; border-radius:12px; border:1px solid rgba(255,255,255,.12)" />
-                </figure>
-                {% endif %}
-                {% endfor %}
-                {% else %}
-                <p class="muted">Nenhum gráfico ainda — aguarde a integração do Dev 3.</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="inner">
-            <h3>Gráficos avançados / interativos</h3>
-            <div id="advanced-plots">
-                {% if plots %}
-                {% for p in plots %}
-                {% if p.section == 'advanced' %}
-                <figure style="margin:0 0 16px">
-                    <figcaption class="muted" style="margin-bottom:6px">{{ p.title }}</figcaption>
-                    <img src="{{ p.img }}" alt="{{ p.title }}"
-                        style="width:100%; border-radius:12px; border:1px solid rgba(255,255,255,.12)" />
-                </figure>
-                {% endif %}
-                {% endfor %}
-                {% else %}
-                <p class="muted">Aqui entram mapas/heatmaps/etc. conforme a base permitir.</p>
-                {% endif %}
-            </div>
-        </div>
+{% if error %}
+<div class="card" style="border-color: #ff9a9a; background: rgba(255, 154, 154, 0.1);">
+    <div class="inner">
+        <h2>Erro na Análise</h2>
+        <p class="muted">{{ error }}</p>
+        <p class="muted">Isso pode acontecer se o CSV enviado estiver vazio ou se, após a limpeza (ex: remoção de linhas com dados nulos), não sobrar nenhum dado para analisar.</p>
+        <a href="{% url 'upload' %}" class="btn secondary">Fazer novo upload</a>
     </div>
 </div>
+{% endif %}
+
+{% if grouped_plots %}
+<div class="card">
+    <div class="inner">
+        <div class="kicker">Etapa 2</div>
+        <h2>Análise Visual dos Dados</h2>
+        <p class="muted">Gráficos gerados automaticamente a partir do seu CSV. Gráficos interativos (como heatmaps ou mapas) podem ser movidos e receber zoom.</p>
+    </div>
+</div>
+
+{% for section_name, plot_list in grouped_plots.items %}
+<div class="card">
+    <div class="inner">
+        <h3>{{ section_name }}</h3>
+        
+        {% for plot in plot_list %}
+        <figure style="margin: 0 0 24px; border-bottom: 1px solid rgba(255,255,255,.08); padding-bottom: 24px;">
+            <figcaption class="muted" style="margin-bottom: 8px; font-size: 14px;">{{ plot.title }}</figcaption>
+            
+            {% if plot.html|slice:":10" == "data:image" %}
+                <!-- Renderiza como imagem estática (Matplotlib) -->
+                <img src="{{ plot.html }}" alt="{{ plot.title }}"
+                     style="width:100%; max-width: 100%; border-radius:12px; border:1px solid rgba(255,255,255,.12)" />
+            {% else %}
+                <!-- Renderiza como HTML (Plotly, Tabelas de Estatísticas) -->
+                <div style="background: white; border-radius: 12px; overflow: hidden; color: #333; padding: 10px;">
+                    {{ plot.html|safe }}
+                </div>
+            {% endif %}
+            
+        </figure>
+        {% endfor %}
+        
+    </div>
+</div>
+{% endfor %}
+
+{% endif %}
+
 {% endblock %}

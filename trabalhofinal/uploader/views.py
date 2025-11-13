@@ -27,6 +27,35 @@ def upload_file(request):
             request.session["df_columns"] = list(df.columns)
             request.session.pop("dataframe", None)
             
+            try:
+                upload_dir_name = 'uploads'
+                max_files = 3
+                _, filenames = default_storage.listdir(upload_dir_name)
+                csv_files = [os.path.join(upload_dir_name, f) for f in filenames if f.lower().endswith('.csv')]
+                
+                if len(csv_files) > max_files:
+                    files_with_mtime = []
+                    for path in csv_files:
+                        try:
+                            files_with_mtime.append((path, default_storage.get_mtime(path)))
+                        except (IOError, FileNotFoundError):
+                            continue
+                    
+                    files_with_mtime.sort(key=lambda x: x[1])
+                    
+                    num_to_delete = len(files_with_mtime) - max_files
+                    files_to_delete = files_with_mtime[:num_to_delete]
+                    
+                    for path, _ in files_to_delete:
+                        try:
+                            default_storage.delete(path)
+                        except (IOError, FileNotFoundError):
+                            continue
+            except (IOError, FileNotFoundError):
+                pass
+            except Exception:
+                pass
+
             return redirect("analysis")
         except Exception as e:
             if 'actual_path' in locals() and default_storage.exists(actual_path):

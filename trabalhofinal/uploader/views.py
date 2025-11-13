@@ -37,7 +37,8 @@ def upload_file(request):
                     files_with_mtime = []
                     for path in csv_files:
                         try:
-                            files_with_mtime.append((path, default_storage.get_mtime(path)))
+                            full_file_path = os.path.join(settings.MEDIA_ROOT, path)
+                            files_with_mtime.append((path, os.path.getmtime(full_file_path)))
                         except (IOError, FileNotFoundError):
                             continue
                     
@@ -51,9 +52,11 @@ def upload_file(request):
                             default_storage.delete(path)
                         except (IOError, FileNotFoundError):
                             continue
-            except (IOError, FileNotFoundError):
+            except (IOError, FileNotFoundError) as e:
+                print(f"Erro de E/S na limpeza de arquivos: {e}")
                 pass
-            except Exception:
+            except Exception as e:
+                print(f"Erro inesperado durante a limpeza de arquivos: {e}")
                 pass
 
             return redirect("analysis")

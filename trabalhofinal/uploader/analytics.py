@@ -42,7 +42,10 @@ class DataAnalyzer:
 
         for col in df.columns:
             if df[col].dtype == "object":
-                df[col] = pd.to_numeric(df[col], errors="ignore")
+                try:
+                    df[col] = pd.to_numeric(df[col])
+                except (ValueError, TypeError):
+                    pass
 
         df.drop_duplicates(inplace=True)
         df.reset_index(drop=True, inplace=True)
